@@ -1,0 +1,1 @@
+# Huawei_Dorado_Zabbix_Template
