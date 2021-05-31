@@ -1,0 +1,1083 @@
+zabbix_export:
+  version: '5.2'
+  date: '2021-05-31T07:48:52Z'
+  groups:
+    -
+      name: Templates
+  templates:
+    -
+      template: 'ZT Huawei OceanStor Rest-API v2'
+      name: 'ZT Huawei OceanStor Rest-API v2'
+      groups:
+        -
+          name: Templates
+      applications:
+        -
+          name: 'BBU health'
+        -
+          name: Common
+        -
+          name: Controller
+        -
+          name: 'Controller health'
+        -
+          name: Disk
+        -
+          name: DiskDomain
+        -
+          name: 'Disk health'
+        -
+          name: 'Disk temperature'
+        -
+          name: Enclosure
+        -
+          name: 'Enclosure health'
+        -
+          name: Eth
+        -
+          name: 'Eth health'
+        -
+          name: ExpBoard
+        -
+          name: 'ExpBoard health'
+        -
+          name: FAN
+        -
+          name: 'FAN health'
+        -
+          name: FC
+        -
+          name: 'FC health'
+        -
+          name: get_data_from_script
+        -
+          name: Health
+        -
+          name: INFO
+        -
+          name: 'Interface Module'
+        -
+          name: 'Interface Module health'
+        -
+          name: 'LUN Capacity'
+        -
+          name: 'LUN health'
+        -
+          name: Other
+        -
+          name: Pool
+        -
+          name: PSU
+        -
+          name: 'PSU health'
+        -
+          name: SAS
+        -
+          name: 'SAS health'
+        -
+          name: StorageTier
+      items:
+        -
+          name: 'get discovery'
+          type: EXTERNAL
+          key: 'huawei_get_state.py["--api_ip={HOST.IP}","--api_port={$API_PORT}","--api_user={$API_USER}","--api_password={$API_PASSWORD}","--storage_name={HOST.NAME}","--discovery"]'
+          delay: 12h
+          history: 7d
+          applications:
+            -
+              name: get_data_from_script
+          request_method: POST
+        -
+          name: 'get health state'
+          type: EXTERNAL
+          key: 'huawei_get_state.py["--api_ip={HOST.IP}","--api_port={$API_PORT}","--api_user={$API_USER}","--api_password={$API_PASSWORD}","--storage_name={HOST.NAME}","--status"]'
+          delay: 2m
+          history: 7d
+          applications:
+            -
+              name: get_data_from_script
+          request_method: POST
+          triggers:
+            -
+              expression: '{count(2h,1,ge)}=40 or {count(2h,2,ge)}=40'
+              name: 'Error occurs on sending metrics'
+              priority: HIGH
+            -
+              expression: '{nodata(3600)}=1'
+              name: 'No data from storage in next 1 hour'
+              priority: HIGH
+      discovery_rules:
+        -
+          name: BBU
+          type: TRAP
+          key: backup_power
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of a BBU "{#LOCATION}"'
+              type: TRAP
+              key: 'health.backup_power.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'BBU health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{min(43200)}=12 or {last()}=2 or {last()}=3 or {last()}=0'
+                  name: 'BBU "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of a BBU "{#LOCATION}"'
+              type: TRAP
+              key: 'running.backup_power.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'BBU health'
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=28 or {last()}=0'
+                  name: 'BBU "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: Controller
+          type: TRAP
+          key: controller
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'CPU utilization of a Controller "{#LOCATION}"'
+              type: TRAP
+              key: 'cpu.controller.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: '%'
+              applications:
+                -
+                  name: Controller
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              trigger_prototypes:
+                -
+                  expression: '{last(#3)}>79'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: '{last(#3)}<79'
+                  name: 'Controller "{#LOCATION}" CPU utilization is higher then 80%'
+                  priority: WARNING
+            -
+              name: 'Health status of a Controller "{#LOCATION}"'
+              type: TRAP
+              key: 'health.controller.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Controller health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last(0)}<>1'
+                  name: 'Controller "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Total IOps of a Controller "{#LOCATION}"'
+              type: TRAP
+              key: 'io.controller.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: iops
+              applications:
+                -
+                  name: Controller
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+            -
+              name: 'Memory utilization of a Controller "{#LOCATION}"'
+              type: TRAP
+              key: 'mem.controller.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: '%'
+              applications:
+                -
+                  name: Controller
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              trigger_prototypes:
+                -
+                  expression: '{last(#3)}>79'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: '{last(#3)}<79'
+                  name: 'Controller "{#LOCATION}" memory utilization is higher then 80%'
+                  priority: WARNING
+            -
+              name: 'Running status of a Controller "{#LOCATION}"'
+              type: TRAP
+              key: 'running.controller.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Controller
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last(0)}<>27'
+                  name: 'Controller "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: Disk
+          type: TRAP
+          key: disk
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of disk "{#LOCATION}"'
+              type: TRAP
+              key: 'health.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Disk health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'Hard disk "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Health mark for disk "{#LOCATION}"'
+              type: TRAP
+              key: 'health_mark.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              units: Days
+              applications:
+                -
+                  name: Disk
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>{prev()}'
+                  recovery_mode: NONE
+                  name: 'Hard disk "{#LOCATION}" health mark was changed'
+                  priority: INFO
+            -
+              name: 'Remain life for disk "{#LOCATION}"'
+              type: TRAP
+              key: 'remain_life.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              applications:
+                -
+                  name: Disk
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>{prev()}'
+                  recovery_mode: NONE
+                  name: 'Hard disk "{#LOCATION}" remain life value was changed'
+                  priority: INFO
+            -
+              name: 'Running status of disk "{#LOCATION}"'
+              type: TRAP
+              key: 'running.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Disk
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27'
+                  name: 'Hard disk "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Temperature of disk "{#LOCATION}"'
+              type: TRAP
+              key: 'temperature.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              units: C
+              applications:
+                -
+                  name: Disk
+              trigger_prototypes:
+                -
+                  expression: '{last(#2)}>40'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: '{last(#5)}<40'
+                  name: 'Hard disk "{#LOCATION}" temperature is higher then 40 C'
+                  priority: WARNING
+            -
+              name: 'Power-on days for disk "{#LOCATION}"'
+              type: TRAP
+              key: 'working_days.disk.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              units: Days
+              applications:
+                -
+                  name: Disk
+          request_method: POST
+        -
+          name: DiskDomain
+          type: TRAP
+          key: diskpool
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of a DiskDomain "{#NAME}"'
+              type: TRAP
+              key: 'health.diskpool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: DiskDomain
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=2'
+                  name: 'DiskDomain "{#NAME}" health status is {ITEM.VALUE}'
+                  priority: DISASTER
+            -
+              name: 'Running status of a DiskDomain "{#NAME}"'
+              type: TRAP
+              key: 'running.diskpool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: DiskDomain
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=28'
+                  name: 'DiskDomain "{#NAME}" running status is {ITEM.VALUE}'
+                  priority: DISASTER
+          request_method: POST
+        -
+          name: Enclosure
+          type: TRAP
+          key: enclosure
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of an enclosure "{#LOCATION}"'
+              type: TRAP
+              key: 'health.enclosure.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Enclosure health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'Enclosure "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'MAC of an enclosure "{#LOCATION}"'
+              type: TRAP
+              key: 'mac.enclosure.[{#LOCATION}]'
+              delay: '0'
+              history: 1d
+              trends: '0'
+              value_type: TEXT
+              applications:
+                -
+                  name: Enclosure
+            -
+              name: 'Running status of an enclosure "{#LOCATION}"'
+              type: TRAP
+              key: 'running.enclosure.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Enclosure
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27'
+                  name: 'Enclosure "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Serial number of an enclosure "{#LOCATION}"'
+              type: TRAP
+              key: 'sn.enclosure.[{#LOCATION}]'
+              delay: '0'
+              history: 1d
+              trends: '0'
+              value_type: TEXT
+              applications:
+                -
+                  name: Enclosure
+            -
+              name: 'Temperature of an enclosure "{#LOCATION}"'
+              type: TRAP
+              key: 'temperature.enclosure.[{#LOCATION}]'
+              delay: '0'
+              history: 3d
+              units: C
+              applications:
+                -
+                  name: Enclosure
+              trigger_prototypes:
+                -
+                  expression: '{last(#2)}>40'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: '{last(#5)}<40'
+                  name: 'Enclosure "{#LOCATION}" temperature is higher then 40 C'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: PortEth
+          type: TRAP
+          key: eth_port
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of an Ethernet port "{#LOCATION}"'
+              type: TRAP
+              key: 'health.eth_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Eth health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'PortEth "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of an Ethernet port "{#LOCATION}"'
+              type: TRAP
+              key: 'running.eth_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Eth
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=11'
+                  name: 'PortEth "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: ExpBoard
+          type: TRAP
+          key: expboard
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of an expansion module "{#LOCATION}"'
+              type: TRAP
+              key: 'health.expboard.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'ExpBoard health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'ExpBoard "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of an expansion module "{#LOCATION}"'
+              type: TRAP
+              key: 'running.expboard.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: ExpBoard
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27 and {last()}<>2'
+                  name: 'ExpBoard "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: FAN
+          type: TRAP
+          key: fan
+          delay: '0'
+          lifetime: 3d
+          item_prototypes:
+            -
+              name: 'Health Status of a FAN "{#LOCATION}"'
+              type: TRAP
+              key: 'health.fan.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'FAN health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'FAN "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of a FAN "{#LOCATION}"'
+              type: TRAP
+              key: 'running.fan.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: FAN
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27 and {last()}<>2'
+                  name: 'FAN "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: PortFibreChannel
+          type: TRAP
+          key: fc_port
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of a Fibre Channel port "{#LOCATION}"'
+              type: TRAP
+              key: 'health.fc_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'FC health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'PortFibreChannel "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of a Fibre Channel port "{#LOCATION}"'
+              type: TRAP
+              key: 'running.fc_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: FC
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=11'
+                  name: 'PortFibreChannel "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: InterfaceModule
+          type: TRAP
+          key: intf_module
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of an interface module "{#LOCATION}"'
+              type: TRAP
+              key: 'health.intf_module.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Interface Module health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'InterfaceModule "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of an interface module "{#LOCATION}"'
+              type: TRAP
+              key: 'running.intf_module.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'Interface Module'
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27 and {last()}<>2'
+                  name: 'InterfaceModule "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: Lun
+          type: TRAP
+          key: lun
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of the LUN "{#NAME}"'
+              type: TRAP
+              key: 'health.lun.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 60d
+              applications:
+                -
+                  name: 'LUN health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'LUN "{#NAME}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of the LUN "{#NAME}"'
+              type: TRAP
+              key: 'running.lun.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 60d
+              applications:
+                -
+                  name: 'LUN health'
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27'
+                  name: 'LUN "{#NAME}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: PSU
+          type: TRAP
+          key: power
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health Status of a PSU "{#LOCATION}"'
+              type: TRAP
+              key: 'health.power.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'PSU health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'PSU "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running Status of a PSU "{#LOCATION}"'
+              type: TRAP
+              key: 'running.power.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: PSU
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>27'
+                  name: 'PSU "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: PortSAS
+          type: TRAP
+          key: sas_port
+          delay: '0'
+          status: DISABLED
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Health status of a SAS port "{#LOCATION}"'
+              type: TRAP
+              key: 'health.sas_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: 'SAS health'
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}<>1'
+                  name: 'PortSAS "{#LOCATION}" health status is {ITEM.VALUE}'
+                  priority: HIGH
+            -
+              name: 'Running status of a SAS port "{#LOCATION}"'
+              type: TRAP
+              key: 'running.sas_port.[{#LOCATION}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: SAS
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=11'
+                  name: 'PortSAS "{#LOCATION}" running status is {ITEM.VALUE}'
+                  priority: HIGH
+          request_method: POST
+        -
+          name: Pool
+          type: TRAP
+          key: storagepool
+          delay: '0'
+          lifetime: 1d
+          item_prototypes:
+            -
+              name: 'Free capacity of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'free.capacity.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: B
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+            -
+              name: 'Health status of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'health.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Pool
+              valuemap:
+                name: Huawei_HEALTH_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=2'
+                  name: 'Pool "{#NAME}" health status is {ITEM.VALUE}'
+                  priority: DISASTER
+            -
+              name: 'Running status of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'running.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              applications:
+                -
+                  name: Pool
+              valuemap:
+                name: Huawei_RUNNING_STATUS
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}=28'
+                  name: 'Pool "{#NAME}" running status is {ITEM.VALUE}'
+                  priority: DISASTER
+            -
+              name: 'Subscribed capacity of a Pool "{#NAME}" in percent'
+              type: CALCULATED
+              key: 'subscribed.capacity.percent.storagepool.[{#NAME}]'
+              delay: 3m
+              history: 1w
+              trends: 90d
+              value_type: FLOAT
+              units: '%'
+              params: '(100*last("subscribed.capacity.storagepool.[{#NAME}]"))/last("total.capacity.storagepool.[{#NAME}]")'
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}>{$SUBSCRIBED_PERCENT:"{#NAME}"}'
+                  name: 'Subscribed capacity on pool "{#NAME}" > {$SUBSCRIBED_PERCENT:"{#NAME}"}%'
+                  priority: HIGH
+            -
+              name: 'Subscribed capacity of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'subscribed.capacity.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: B
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+            -
+              name: 'Total capacity of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'total.capacity.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: B
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+            -
+              name: 'Used capacity of a Pool "{#NAME}" in percent'
+              type: CALCULATED
+              key: 'used.capacity.percent.storagepool.[{#NAME}]'
+              delay: 3m
+              value_type: FLOAT
+              units: '%'
+              params: '(100*last("used.capacity.storagepool.[{#NAME}]"))/last("total.capacity.storagepool.[{#NAME}]")'
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+              trigger_prototypes:
+                -
+                  expression: '{last()}>{$USED_PERCENT:"{#NAME}"}'
+                  name: 'Used capacity on pool "{#NAME}" > {$USED_PERCENT:"{#NAME}"}%'
+                  priority: HIGH
+            -
+              name: 'Used capacity of a Pool "{#NAME}"'
+              type: TRAP
+              key: 'used.capacity.storagepool.[{#NAME}]'
+              delay: '0'
+              history: 1w
+              trends: 90d
+              units: B
+              applications:
+                -
+                  name: Pool
+              request_method: POST
+          request_method: POST
+      macros:
+        -
+          macro: '{$API_PASSWORD}'
+        -
+          macro: '{$API_PORT}'
+          value: '8088'
+        -
+          macro: '{$API_USER}'
+        -
+          macro: '{$SUBSCRIBED_PERCENT}'
+          value: '91'
+        -
+          macro: '{$USED_PERCENT}'
+          value: '91'
+  value_maps:
+    -
+      name: Huawei_HEALTH_STATUS
+      mappings:
+        -
+          value: '0'
+          newvalue: Unknown
+        -
+          value: '1'
+          newvalue: Normal
+        -
+          value: '2'
+          newvalue: Fault
+        -
+          value: '3'
+          newvalue: Pre-fail
+        -
+          value: '4'
+          newvalue: 'Partially broken'
+        -
+          value: '5'
+          newvalue: Degraded
+        -
+          value: '6'
+          newvalue: 'Bad sectors found'
+        -
+          value: '7'
+          newvalue: 'Bit errors found'
+        -
+          value: '8'
+          newvalue: Consistent
+        -
+          value: '9'
+          newvalue: Inconsistent
+        -
+          value: '10'
+          newvalue: Busy
+        -
+          value: '11'
+          newvalue: 'No input'
+        -
+          value: '12'
+          newvalue: 'Low battery'
+        -
+          value: '13'
+          newvalue: 'Single link fault'
+        -
+          value: '14'
+          newvalue: Invalid
+        -
+          value: '15'
+          newvalue: 'Write protect'
+    -
+      name: Huawei_RUNNING_STATUS
+      mappings:
+        -
+          value: '0'
+          newvalue: Unknown
+        -
+          value: '1'
+          newvalue: Normal
+        -
+          value: '2'
+          newvalue: Running
+        -
+          value: '5'
+          newvalue: 'sleep in high temperature'
+        -
+          value: '10'
+          newvalue: Link_up
+        -
+          value: '11'
+          newvalue: Link_down
+        -
+          value: '12'
+          newvalue: 'powering on'
+        -
+          value: '13'
+          newvalue: 'powered off'
+        -
+          value: '14'
+          newvalue: pre-copy
+        -
+          value: '16'
+          newvalue: reconstruction
+        -
+          value: '27'
+          newvalue: online
+        -
+          value: '28'
+          newvalue: offline
+        -
+          value: '32'
+          newvalue: balancing
+        -
+          value: '48'
+          newvalue: charging
+        -
+          value: '49'
+          newvalue: 'charging completed'
+        -
+          value: '50'
+          newvalue: discharging
+        -
+          value: '53'
+          newvalue: initializing
+        -
+          value: '103'
+          newvalue: 'power-on failed'
